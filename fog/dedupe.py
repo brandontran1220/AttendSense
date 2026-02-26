@@ -1,13 +1,32 @@
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 
 DB_NAME = "attendsense.db"
 
+DEDUP_SECONDS = 30
+
 def process_event(person_id, name, timestamp, confidence, camera_id):
+
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
 
     now = datetime.utcnow().isoformat()
+
+    # Check for existing attendance status
+    cursor.execute("""
+        SELECT last_seen FROM attendance_status WHERE person_id=?
+    """, (person_id,))
+    existing = cursor.fetchone()
+
+    if existing:
+        last_seen_str = existing[0]
+        last_seen = datetime.fromisoformat(last_seen_str)
+        current_time = datetime.fromisoformat(timestamp)
+
+        # deduplication: if the same person is seen again within DEDUP_SECONDS, ignore it
+        if current_time - last_seen < timedelta(seconds=DEDUP_SECONDS):
+            conn.close()
+            return  # Ignore duplicate within time window
 
     # Insert event log
     cursor.execute("""
@@ -16,12 +35,7 @@ def process_event(person_id, name, timestamp, confidence, camera_id):
         VALUES (?, ?, ?, ?, ?, ?)
     """, (person_id, name, timestamp, confidence, camera_id, now))
 
-    # Check if already present
-    cursor.execute("""
-        SELECT * FROM attendance_status WHERE person_id=?
-    """, (person_id,))
-    existing = cursor.fetchone()
-
+    # Update or insert attendance status
     if existing:
         cursor.execute("""
             UPDATE attendance_status
