@@ -30,14 +30,15 @@ def dashboard():
 @app.route("/attendance")
 def get_attendance():
     conn = sqlite3.connect("attendsense.db")
+    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
-    cursor.execute("SELECT person_id FROM attendance_status WHERE present=1")
+    cursor.execute("SELECT * FROM attendance_status WHERE present=1")
     rows = cursor.fetchall()
 
     conn.close()
 
-    return jsonify([{"person_id": row[0]} for row in rows])
+    return jsonify([dict(row) for row in rows])
 
 @app.route("/heartbeat", methods=["POST"])
 def heartbeat():
