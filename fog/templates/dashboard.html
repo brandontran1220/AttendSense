@@ -1,0 +1,35 @@
+<body>
+    <h1>AttendSense Live Dashboard</h1>
+
+    <div id="attendance"></div>
+
+<script>
+async function loadAttendance() {
+    const response = await fetch("/attendance");
+    const data = await response.json();
+
+    let html = "<h2>Present Students</h2>";
+
+    if (data.length === 0) {
+        html += "<p>No one detected yet.</p>";
+    }
+
+    data.forEach(person => {
+        html += `
+            <div style="margin-bottom:15px;">
+                <strong>${person.name}</strong><br>
+                First Seen: ${person.first_seen}<br>
+                Last Seen: ${person.last_seen}<br>
+                Present: ${person.present}
+            </div>
+            <hr>
+        `;
+    });
+
+    document.getElementById("attendance").innerHTML = html;
+}
+
+setInterval(loadAttendance, 2000);
+loadAttendance();
+</script>
+</body>
