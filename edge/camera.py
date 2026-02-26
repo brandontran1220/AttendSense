@@ -1,4 +1,5 @@
 import cv2
+import numpy as np
 from typing import Optional
 
 class Camera:
@@ -58,9 +59,41 @@ class Camera:
             return False, None
         return True, frame
     
+    def _letterbox_to_window(self, frame, win_w, win_h):
+        # Resize frame to fit within (win_w, win_h) while maintaining aspect ratio, and add black borders if needed.
+        h, w = frame.shape[:2]
+        if win_w <= 0 or win_h <= 0:
+            return frame
+
+        scale = min(win_w / w, win_h / h)
+        new_w = int(w * scale)
+        new_h = int(h * scale)
+
+        resized = cv2.resize(frame, (new_w, new_h), interpolation=cv2.INTER_AREA)
+
+        canvas = np.zeros((win_h, win_w, 3), dtype=np.uint8)
+        x = (win_w - new_w) // 2
+        y = (win_h - new_h) // 2
+        canvas[y:y+new_h, x:x+new_w] = resized
+        return canvas
+    
     def show(self, frame, window_name: str = "Jetson Camera"):
         if not self.show_preview:
             return
+        
+        if not getattr(self, '_window_initialized', False) or getattr(self, '_last_window_name', '') != window_name:
+            self._window_initialized = window_name
+            cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+            self._window_initialized = True
+        
+        try:
+            _, _, win_w, win_h = cv2.getWindowImageRect(window_name)
+            frame_to_show = self._letterbox_to_window(frame, win_w, win_h)
+            
+        except cv2.error:
+            # Fallback if getWindowImageRect isn't available on some builds
+            frame_to_show = frame
+            
         # Overlay: "Press 'q' to quit"
         text = "Press 'q' to quit"
         x, y = 20, 40
