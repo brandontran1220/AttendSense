@@ -20,6 +20,12 @@
         </div>
     </header>
 
+    {% if notice %}
+    <section class="card notice">
+        <p>{{ notice }}</p>
+    </section>
+    {% endif %}
+
     <section class="card">
         <h2>Session History</h2>
         {% if sessions %}
@@ -32,7 +38,7 @@
                     <th>End</th>
                     <th>Present</th>
                     <th>Status</th>
-                    <th></th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -45,9 +51,22 @@
                     <td>{{ s.present_count }} / {{ s.total_students }}</td>
                     <td>{{ "Ended" if s.end_time else "Active" }}</td>
                     <td>
-                        <a class="nav-link" href="{{ url_for('session_history', session_id=s.id) }}">
-                            {{ "Viewing" if selected_session_id == s.id else "View" }}
-                        </a>
+                        <div class="row-actions">
+                            <a class="nav-link" href="{{ url_for('session_history', session_id=s.id) }}">
+                                {{ "Viewing" if selected_session_id == s.id else "View" }}
+                            </a>
+                            <form method="post" action="{{ url_for('delete_session') }}" class="inline-form">
+                                <input type="hidden" name="session_id" value="{{ s.id }}">
+                                <button
+                                    type="submit"
+                                    class="danger-button"
+                                    {% if not s.end_time %}disabled title="End active session before deleting"{% endif %}
+                                    onclick="return confirm('Delete session {{ s.id }}? This will remove stored attendance for that session.');"
+                                >
+                                    Delete
+                                </button>
+                            </form>
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}

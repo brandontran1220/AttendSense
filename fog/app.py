@@ -105,6 +105,16 @@ def build_session_detail(session_row: dict) -> dict:
     }
 
 
+def build_session_notice(message_key: str) -> str | None:
+    messages = {
+        "deleted": "Session deleted.",
+        "invalid_session": "Invalid session id.",
+        "not_found": "Session not found.",
+        "active_not_allowed": "End the active session before deleting it.",
+    }
+    return messages.get(message_key)
+
+
 @app.route("/event", methods=["POST"])
 def receive_event():
     ok, payload = validate_event_payload(request.get_json(silent=True))
@@ -168,6 +178,7 @@ def dashboard_api():
 def session_history():
     sessions = database.list_sessions(limit=100)
     selected_session = None
+    notice = build_session_notice(request.args.get("msg", "").strip())
 
     if sessions:
         selected_id = request.args.get("session_id", "").strip()
@@ -186,7 +197,28 @@ def session_history():
         sessions=sessions,
         selected_session_id=int(selected_session["id"]) if selected_session else None,
         detail=detail,
+        notice=notice,
     )
+
+
+@app.route("/session/delete", methods=["POST"])
+@login_required
+def delete_session():
+    session_id_raw = request.form.get("session_id", "").strip()
+    try:
+        session_id = int(session_id_raw)
+    except ValueError:
+        return redirect(url_for("session_history", msg="invalid_session"))
+
+    session_row = database.get_session_by_id(session_id)
+    if not session_row:
+        return redirect(url_for("session_history", msg="not_found"))
+
+    if not session_row.get("end_time"):
+        return redirect(url_for("session_history", session_id=session_id, msg="active_not_allowed"))
+
+    database.delete_session(session_id=session_id)
+    return redirect(url_for("session_history", msg="deleted"))
 
 
 @app.route("/session/start", methods=["POST"])

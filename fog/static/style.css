@@ -110,6 +110,16 @@ table {
     padding: 1rem;
 }
 
+.notice {
+    border-color: #94a3b8;
+    background: #f8fafc;
+}
+
+.notice p {
+    margin: 0;
+    font-weight: 600;
+}
+
 th,
 td {
     border: 1px solid #d9e2ec;
@@ -153,4 +163,27 @@ th {
 .error {
     color: #b91c1c;
     font-weight: 600;
+}
+
+.row-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.inline-form {
+    margin: 0;
+}
+
+.danger-button {
+    background: #b91c1c;
+}
+
+.danger-button:hover {
+    background: #991b1b;
+}
+
+.danger-button:disabled {
+    background: #94a3b8;
+    cursor: not-allowed;
 }
