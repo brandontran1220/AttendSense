@@ -220,3 +220,25 @@ class AttendSenseDB:
             if not row:
                 return 0
             return int(row["event_count"])
+
+    def delete_session(self, session_id: int) -> bool:
+        session_row = self.get_session_by_id(session_id)
+        if not session_row:
+            return False
+
+        start_time = session_row["start_time"]
+        end_time = session_row["end_time"]
+
+        with self._connect() as conn:
+            conn.execute("DELETE FROM attendance_status WHERE session_id = ?", (session_id,))
+            conn.execute("DELETE FROM sessions WHERE id = ?", (session_id,))
+            if end_time:
+                conn.execute(
+                    """
+                    DELETE FROM attendance_events
+                    WHERE timestamp >= ? AND timestamp <= ?
+                    """,
+                    (start_time, end_time),
+                )
+            conn.commit()
+        return True
