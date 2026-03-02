@@ -1,35 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AttendSense Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
 <body>
-    <h1>AttendSense Live Dashboard</h1>
+    <header class="topbar">
+        <div>
+            <h1>AttendSense</h1>
+            <p id="sessionName">Session: {{ data.session_name }}</p>
+        </div>
+        <div class="topbar-actions">
+            <a class="nav-link" href="{{ url_for('session_history') }}">Past Sessions</a>
+            <form method="post" action="{{ url_for('logout') }}">
+                <button type="submit">Log out</button>
+            </form>
+        </div>
+    </header>
 
-    <div id="attendance"></div>
+    <section class="controls">
+        <form method="post" action="{{ url_for('start_session') }}" class="control-form">
+            <label for="class_name">Class Name</label>
+            <input type="text" id="class_name" name="class_name" placeholder="CS 131" required>
+            <button type="submit">Start Session</button>
+        </form>
+        <form method="post" action="{{ url_for('end_session') }}" class="control-form">
+            <button type="submit">End Session</button>
+        </form>
+    </section>
 
-<script>
-async function loadAttendance() {
-    const response = await fetch("/attendance");
-    const data = await response.json();
+    <section class="summary">
+        <p><strong>Present:</strong> <span id="presentCount">{{ data.present_count }}</span> / <span id="totalCount">{{ data.total_students }}</span></p>
+    </section>
 
-    let html = "<h2>Present Students</h2>";
+    <section>
+        <table>
+            <thead>
+                <tr>
+                    <th>Person ID</th>
+                    <th>Name</th>
+                    <th>Status</th>
+                    <th>Last Detection</th>
+                </tr>
+            </thead>
+            <tbody id="attendanceTable">
+                {% for row in data.rows %}
+                <tr>
+                    <td>{{ row.person_id }}</td>
+                    <td>{{ row.name }}</td>
+                    <td class="{{ 'present' if row.present else 'absent' }}">{{ "Present" if row.present else "Absent" }}</td>
+                    <td>{{ row.last_detection }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </section>
 
-    if (data.length === 0) {
-        html += "<p>No one detected yet.</p>";
-    }
+    <script>
+        async function refreshDashboard() {
+            const response = await fetch("/api/dashboard");
+            if (!response.ok) {
+                return;
+            }
 
-    data.forEach(person => {
-        html += `
-            <div style="margin-bottom:15px;">
-                <strong>${person.name}</strong><br>
-                First Seen: ${person.first_seen}<br>
-                Last Seen: ${person.last_seen}<br>
-                Present: ${person.present}
-            </div>
-            <hr>
-        `;
-    });
+            const data = await response.json();
+            document.getElementById("sessionName").textContent = "Session: " + data.session_name;
+            document.getElementById("presentCount").textContent = data.present_count;
+            document.getElementById("totalCount").textContent = data.total_students;
 
-    document.getElementById("attendance").innerHTML = html;
-}
+            const table = document.getElementById("attendanceTable");
+            table.innerHTML = "";
+            data.rows.forEach((row) => {
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td>${row.person_id}</td>
+                    <td>${row.name}</td>
+                    <td class="${row.present ? "present" : "absent"}">${row.present ? "Present" : "Absent"}</td>
+                    <td>${row.last_detection}</td>
+                `;
+                table.appendChild(tr);
+            });
+        }
 
-setInterval(loadAttendance, 2000);
-loadAttendance();
-</script>
+        setInterval(refreshDashboard, 5000);
+    </script>
 </body>
+</html>
