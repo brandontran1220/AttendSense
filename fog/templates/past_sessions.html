@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AttendSense Past Sessions</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header class="topbar">
+        <div>
+            <h1>AttendSense</h1>
+            <p>Past Sessions</p>
+        </div>
+        <div class="topbar-actions">
+            <a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a>
+            <form method="post" action="{{ url_for('logout') }}">
+                <button type="submit">Log out</button>
+            </form>
+        </div>
+    </header>
+
+    <section class="card">
+        <h2>Session History</h2>
+        {% if sessions %}
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Class</th>
+                    <th>Start</th>
+                    <th>End</th>
+                    <th>Present</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in sessions %}
+                <tr>
+                    <td>{{ s.id }}</td>
+                    <td>{{ s.class_name }}</td>
+                    <td>{{ s.start_time }}</td>
+                    <td>{{ s.end_time if s.end_time else "Active" }}</td>
+                    <td>{{ s.present_count }} / {{ s.total_students }}</td>
+                    <td>{{ "Ended" if s.end_time else "Active" }}</td>
+                    <td>
+                        <a class="nav-link" href="{{ url_for('session_history', session_id=s.id) }}">
+                            {{ "Viewing" if selected_session_id == s.id else "View" }}
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>No sessions found yet.</p>
+        {% endif %}
+    </section>
+
+    <section class="card">
+        <h2>Session Detail</h2>
+        {% if detail %}
+        <p><strong>Class:</strong> {{ detail.session.class_name }}</p>
+        <p><strong>Window:</strong> {{ detail.session.start_time }} to {{ detail.session.end_time if detail.session.end_time else "Active" }}</p>
+        <p><strong>Present:</strong> {{ detail.present_count }} / {{ detail.total_students }}</p>
+        <p><strong>Events:</strong> {{ detail.event_count }}</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Person ID</th>
+                    <th>Name</th>
+                    <th>Status</th>
+                    <th>Last Detection</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in detail.rows %}
+                <tr>
+                    <td>{{ row.person_id }}</td>
+                    <td>{{ row.name }}</td>
+                    <td class="{{ 'present' if row.present else 'absent' }}">{{ "Present" if row.present else "Absent" }}</td>
+                    <td>{{ row.last_detection }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>Select a session to view details.</p>
+        {% endif %}
+    </section>
+</body>
+</html>
