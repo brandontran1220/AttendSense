@@ -23,10 +23,12 @@ def load_students() -> list[dict[str, str]]:
         raw = json.load(handle)
 
     students: list[dict[str, str]] = []
+    seen_person_ids: set[str] = set()
     for row in raw:
         person_id = str(row.get("person_id", "")).strip()
-        if not person_id:
+        if not person_id or person_id in seen_person_ids:
             continue
+        seen_person_ids.add(person_id)
         students.append(
             {
                 "person_id": person_id,

@@ -25,6 +25,7 @@ app.secret_key = SECRET_KEY
 database = AttendSenseDB(DB_PATH)
 database.init_db()
 students = load_students()
+student_person_ids = {student["person_id"] for student in students}
 session_manager = SessionManager(database=database, students=students)
 deduplicator = EventDeduplicator(window_seconds=DEDUP_WINDOW_SECONDS)
 
@@ -122,6 +123,9 @@ def receive_event():
         return jsonify({"status": "error", "message": payload}), 400
 
     person_id = payload["person_id"]
+    if person_id not in student_person_ids:
+        return jsonify({"status": "ignored", "reason": "unknown_person_id"}), 200
+
     timestamp = payload["timestamp"]
 
     if not deduplicator.should_accept(person_id, payload["timestamp_dt"]):
@@ -176,7 +180,7 @@ def dashboard_api():
 @app.route("/sessions", methods=["GET"])
 @login_required
 def session_history():
-    sessions = database.list_sessions(limit=100)
+    sessions = database.list_sessions(limit=100, allowed_person_ids=sorted(student_person_ids))
     selected_session = None
     notice = build_session_notice(request.args.get("msg", "").strip())
 

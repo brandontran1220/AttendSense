@@ -113,25 +113,66 @@ class AttendSenseDB:
         now = datetime.now(timezone.utc).isoformat(timespec="seconds")
         return self.get_session_for_timestamp(now)
 
-    def list_sessions(self, limit: int = 50) -> list[dict]:
+    def list_sessions(self, limit: int = 50, allowed_person_ids: Optional[list[str]] = None) -> list[dict]:
         with self._connect() as conn:
+            if allowed_person_ids is None:
+                rows = conn.execute(
+                    """
+                    SELECT
+                        s.id,
+                        s.class_name,
+                        s.start_time,
+                        s.end_time,
+                        COALESCE(SUM(CASE WHEN st.present = 1 THEN 1 ELSE 0 END), 0) AS present_count,
+                        COUNT(st.person_id) AS total_students
+                    FROM sessions s
+                    LEFT JOIN attendance_status st
+                      ON st.session_id = s.id
+                    GROUP BY s.id, s.class_name, s.start_time, s.end_time
+                    ORDER BY s.start_time DESC
+                    LIMIT ?
+                    """,
+                    (limit,),
+                ).fetchall()
+                return [dict(row) for row in rows]
+
+            if not allowed_person_ids:
+                rows = conn.execute(
+                    """
+                    SELECT
+                        s.id,
+                        s.class_name,
+                        s.start_time,
+                        s.end_time,
+                        0 AS present_count,
+                        0 AS total_students
+                    FROM sessions s
+                    ORDER BY s.start_time DESC
+                    LIMIT ?
+                    """,
+                    (limit,),
+                ).fetchall()
+                return [dict(row) for row in rows]
+
+            placeholders = ", ".join("?" for _ in allowed_person_ids)
             rows = conn.execute(
-                """
+                f"""
                 SELECT
                     s.id,
                     s.class_name,
                     s.start_time,
                     s.end_time,
                     COALESCE(SUM(CASE WHEN st.present = 1 THEN 1 ELSE 0 END), 0) AS present_count,
-                    COUNT(st.person_id) AS total_students
+                    ? AS total_students
                 FROM sessions s
                 LEFT JOIN attendance_status st
                   ON st.session_id = s.id
+                 AND st.person_id IN ({placeholders})
                 GROUP BY s.id, s.class_name, s.start_time, s.end_time
                 ORDER BY s.start_time DESC
                 LIMIT ?
                 """,
-                (limit,),
+                (len(allowed_person_ids), *allowed_person_ids, limit),
             ).fetchall()
             return [dict(row) for row in rows]
 
