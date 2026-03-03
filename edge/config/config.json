@@ -1,5 +1,5 @@
 {
-  "fog_host": "192.168.1.253",
+  "fog_host": "10.13.191.4",
   "fog_port": 5000,
   "event_endpoint": "/event",
   "camera_id": "jetson_nano_cam_1",
